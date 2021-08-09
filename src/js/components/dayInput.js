@@ -15,23 +15,26 @@ function useCompactInput(props) {
   return [state, component];
 }
 
-function useSleepInputGroup(props) {
-  const [plannedDuration, durationComp] = useCompactInput({ name: `sleepTime[${props.sleepNum}]`, label: "Planned sleep length (mins)" });
-  const [asleepTime, asleepComp] = useCompactInput({ name: `asleepTime[${props.sleepNum}]`, label: "Asleep time" });
+function usePeriodInputGroup(props) {
   const [awakeTime, awakeComp] = useCompactInput({ name: `awakeTime[${props.sleepNum}]`, label: "Awake time" });
+  const [wakeTime, wakeComp] = useCompactInput({ name: `wakeTime[${props.sleepNum}]`, label: "Planned wake time" });
+  const [asleepTime, asleepComp] = useCompactInput({ name: `asleepTime[${props.sleepNum}]`, label: "Asleep time" });
+  const [plannedDuration, durationComp] = useCompactInput({ name: `sleepTime[${props.sleepNum}]`, label: "Planned sleep length (mins)" });
+
   const state = {
-    plannedDuration: plannedDuration,
+    awakeTime: awakeTime,
+    plannedWakeTime: wakeTime,
     asleepTime: asleepTime,
-    awakeTime: awakeTime
+    plannedDuration: plannedDuration,
   }
 
   const component = (
     <div key={props.key}>
-      <div className="mb-1 mt-3">Sleep #{props.sleepNum}</div>
-      {durationComp}
-      {asleepComp}
+      <div className="mb-1 mt-3">Awake #{props.sleepNum}</div>
       {awakeComp}
-
+      {wakeComp}
+      {asleepComp}
+      {durationComp}
     </div>
   );
 
@@ -39,26 +42,25 @@ function useSleepInputGroup(props) {
 }
 
 function DayInputForm(props) {
-  const [dayAwakeTime, dayAwakeComp] = useCompactInput({ name: "awakeTime", label: "Day awake time" });
+  const periodInputs = [1, 2, 3, 4]
+    .map((sleepNum, i) => usePeriodInputGroup({ sleepNum: sleepNum, key: i }));
 
-  const sleepInputs = [1, 2, 3, 4]
-    .map((sleepNum, i) => useSleepInputGroup({ sleepNum: sleepNum, key: i }));
-  
+  const periodsStateVars = periodInputs.flatMap(([state, comp]) => [state.plannedDuration, state.asleepTime, state.awakeTime, state.plannedWakeTime]);
+
   // shitcode. useEffect shouldn't update the application state
   useEffect(() => {
-    props.model.submitDaySleepsData(0, {
-      awakeTime: dayAwakeTime,
+    console.log("EFFECT");
+    props.model.submitDayPeriodsData(0, {
       title: "14 July",
       dayOfWeek: "Wednesday",
-      daySleeps: sleepInputs.map(([sleepState, sleepComp]) => sleepState)
+      dayPeriods: periodInputs.map(([state, comp]) => state)
     });
-  }, [dayAwakeTime]);
+  }, periodsStateVars);
 
   return (
     <form onSubmit={() => ""}>
       <h4 className="mb-3">Day Input</h4>
-      {dayAwakeComp}
-      {sleepInputs.map(([sleepState, sleepComp]) => sleepComp)}
+      {periodInputs.map(([state, comp]) => comp)}
 
     </form>
   );

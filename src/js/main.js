@@ -46,7 +46,7 @@ function Application() {
           <DayInputForm model={model} />
         </div>
       </MainContainer>
-      
+
     </div>
   );
 }
