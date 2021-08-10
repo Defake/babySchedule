@@ -10,6 +10,24 @@ const initModelData = {
       }
     ]
   },
+  initialPlan: [
+    {
+      wakeTime: "02:30",
+      sleepTime: 45
+    },
+    {
+      wakeTime: "02:45",
+      sleepTime: 2*60
+    },
+    {
+      wakeTime: "02:45",
+      sleepTime: 45
+    },
+    {
+      wakeTime: "03:05",
+      sleepTime: 8*60
+    },
+  ],
   days: [
     {
       title: "14 July",
@@ -69,21 +87,23 @@ function defineModel() {
 
   var model = {
     data: modelState,
-    convertSleepsData: function (dayPeriods) {
+    convertSleepsData: function (dayMerged) {
+      const dayAwakeDt = dayMerged.periods[0] != null && new ParsedTime(dayMerged.periods[0].awakeTime);
+
       var previous = {
-        plannedAwakeDt: dayPeriods[0] && new ParsedTime(dayPeriods[0].awakeTime),
+        plannedAwakeDt: dayAwakeDt
       };
 
       var wakeDt = new ParsedTime("00:00");
       var sleepDt = new ParsedTime("00:00");
 
       var periods = [];
-      const amount = dayPeriods.length;
+      const amount = dayMerged.periods.length;
 
       for (var i = 0; i < amount; i++) {
-        const period = dayPeriods[i];
+        const period = dayMerged.periods[i];
         const nextPeriod = (i + 1 < amount)
-          ? dayPeriods[i + 1]
+          ? dayMerged.periods[i + 1]
           : null;
 
         const awakeDt = new ParsedTime(period.awakeTime);
@@ -96,7 +116,7 @@ function defineModel() {
           ? plannedAwakeDt.plus({ time: plannedWakeDt.time })
           : new InvalidDtObject('?');
 
-        const actualWakeDt = asleepDt.plus({time: -awakeDt.time});
+        const actualWakeDt = asleepDt.plus({ time: -awakeDt.time });
         const nextAwakeDt = new ParsedTime(nextPeriod && nextPeriod.awakeTime);
         const actualDurationDt = nextAwakeDt.plus({ time: -asleepDt.time });
         const asleepDifference = asleepDt.plus({ time: -plannedAsleepDt.time }).time / 60 / 1000;
@@ -112,7 +132,7 @@ function defineModel() {
           },
           actual: {
             awakeTime: awakeDt.formatTime(),
-            asleepTime: asleepDt.formatTime() || "?",
+            asleepTime: asleepDt.formatTime(),
             difference: asleepDifference == 0 ? null : asleepDifference,
             duration: actualDurationDt.isValid
               ? actualDurationDt.time / 60 / 1000
@@ -124,31 +144,55 @@ function defineModel() {
           plannedAwakeDt: plannedDuration ? plannedAsleepDt.plus({ minutes: plannedDuration }) : new InvalidDtObject(),
         };
 
-        wakeDt = wakeDt.plus({time: actualWakeDt.time});
-        sleepDt = sleepDt.plus({time: actualDurationDt.time});
+        wakeDt = wakeDt.plus({ time: actualWakeDt.time });
+        sleepDt = sleepDt.plus({ time: actualDurationDt.time });
       }
 
       return {
         periods,
         wakeTime: wakeDt.formatTime(),
-        sleepTime: sleepDt.formatTime()
+        sleepTime: sleepDt.formatTime(),
+        nightTime: dayAwakeDt.plus({days: 1, time: -new ParsedTime(dayMerged.previousNightAsleepTime).time}).formatTime() 
+      };
+    },
+
+    mergeDayData: function (plan, sleeps) {
+      var periods = [];
+
+      for (var i = 0; i < sleeps.length - 1; i++) {
+        const current = sleeps[i];
+        const next = sleeps[i+1];
+
+        periods.push({
+          awakeTime: current && current.awakeTime,
+          asleepTime: next && next.asleepTime,
+          plannedDuration: plan[i] && plan[i].plannedDuration,
+          plannedWakeTime: plan[i] && plan[i].plannedWakeTime,
+        });
+      }
+
+      return {
+        previousNightAsleepTime: sleeps[0] && sleeps[0].asleepTime,
+        periods
       };
     },
 
     submitDayPeriodsData: function (i, dayData) {
-      const convertedPeriods = this.convertSleepsData(dayData.dayPeriods);
+      const dayMerged = this.mergeDayData(dayData.plan, dayData.sleeps);
+      const convertedPeriods = this.convertSleepsData(dayMerged);
 
       var newDay = {
         title: dayData.title,
         dayOfWeek: dayData.dayOfWeek,
         awakeTime: dayData.awakeTime,
         sleepTime: {
-          plan: "11:11",
           actual: convertedPeriods.sleepTime,
         },
         wakeTime: {
-          plan: "99:99",
           actual: convertedPeriods.wakeTime,
+        },
+        nightTime: {
+          actual: convertedPeriods.nightTime,
         },
         dayPeriods: convertedPeriods.periods
       };

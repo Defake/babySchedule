@@ -67,7 +67,12 @@ function TimelineSleepItem(props) {
         leftText={!lastItem && plan.duration && (<small className="text-muted">{plan.duration} mins</small>)}
         rightText={!lastItem && actual.duration && (<small className="text-muted">{actual.duration} mins</small>)}
         leftDotText={plan.asleepTime}
-        rightDotText={actual.asleepTime && <span>{actual.asleepTime} {actual.difference && <DangerText>(+{actual.difference} min)</DangerText>}</span>}
+        rightDotText={actual.asleepTime && <span>{actual.asleepTime} {
+          actual.difference != undefined && 
+          ((actual.difference > 0) 
+          ? <DangerText>(+{actual.difference} min)</DangerText>
+          : <SuccessText>({actual.difference} min)</SuccessText>)
+        }</span>}
         isEnd={lastItem} />
 
     </React.Fragment>
@@ -82,21 +87,15 @@ function DayTimeline(props) {
     <div className="card">
       <div className="card-body">
         <h5 className="card-title">{day.title}, {day.dayOfWeek}</h5>
-        <h6 className="card-subtitle text-muted">Awake time – {day.awakeTime}</h6>
+        <h6 className="card-subtitle text-muted">Night time: {day.nightTime && day.nightTime.actual || "00:00"}</h6>
+        <h6 className="card-subtitle text-muted mt-1">Wake time: {day.wakeTime && day.wakeTime.actual || "00:00"}</h6>
+        <h6 className="card-subtitle text-muted mt-1">Sleep time: {day.sleepTime && day.sleepTime.actual || "00:00"}</h6>
       </div>
 
       <div className="mt-3 mb-4">
         {
           periods.map((dayPeriod, i) => <TimelineSleepItem dayPeriod={dayPeriod} awakeTime={day.awakeTime} key={i} number={i + 1} />)
         }
-      </div>
-
-      {/* <ul className="list-group list-group-flush">
-          {day.sleeps.map((sleep, i) => <SleepItem sleep={sleep} key={i} number={i + 1} />)}
-        </ul> */}
-
-      <div className="card-footer text-muted">
-        Wake time – {day.wakeTime && day.wakeTime.actual}, Sleep time – {day.sleepTime && day.sleepTime.actual || "?"}
       </div>
     </div>
   );

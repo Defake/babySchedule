@@ -85,14 +85,14 @@ function InvalidDtObject(formatString) {
     plus: function (units) { return this; },
     formatTime: function () {
       // return "";
-      return formatString;
+      return "" + formatString;
     }
   };
 }
 
 
 function timeUtils_parseTime(timeStr) {
-  if (timeStr == null) {
+  if (typeof(timeStr) != "string") {
     return null;
   }
 

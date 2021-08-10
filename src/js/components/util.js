@@ -8,3 +8,9 @@ function DangerText(props) {
     <span className="text-danger">{props.children}</span>
   );
 }
+
+function SuccessText(props) {
+  return (
+    <span className="text-success">{props.children}</span>
+  );
+}

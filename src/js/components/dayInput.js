@@ -1,8 +1,8 @@
 function useCompactInput(props) {
-  const [state, setState] = useState("");
+  const [state, setState] = useState(props.initState || "");
 
   const component = (
-    <div className="mb-2">
+    <div className="mb-2 me-2" style={{ flex: "1 1 50px" }}>
       <input
         value={state}
         onChange={(e) => setState(e.target.value)}
@@ -15,25 +15,28 @@ function useCompactInput(props) {
   return [state, component];
 }
 
-function usePeriodInputGroup(props) {
-  const [awakeTime, awakeComp] = useCompactInput({ name: `awakeTime[${props.sleepNum}]`, label: "Awake time" });
-  const [wakeTime, wakeComp] = useCompactInput({ name: `wakeTime[${props.sleepNum}]`, label: "Planned wake time" });
-  const [asleepTime, asleepComp] = useCompactInput({ name: `asleepTime[${props.sleepNum}]`, label: "Asleep time" });
-  const [plannedDuration, durationComp] = useCompactInput({ name: `sleepTime[${props.sleepNum}]`, label: "Planned sleep length (mins)" });
+function usePlanInputGroup(props) {
+  const [wakeTime, wakeComp] = useCompactInput({
+    name: `wakeTime[${props.i}]`,
+    label: "Wake time",
+    initState: props.init && props.init.wakeTime
+  });
+
+  const [plannedDuration, durationComp] = useCompactInput({
+    name: `sleepTime[${props.i}]`,
+    label: "Sleep length (mins)",
+    initState: props.init && props.init.sleepTime
+  });
 
   const state = {
-    awakeTime: awakeTime,
     plannedWakeTime: wakeTime,
-    asleepTime: asleepTime,
     plannedDuration: plannedDuration,
   }
 
   const component = (
-    <div key={props.key}>
-      <div className="mb-1 mt-3">Awake #{props.sleepNum}</div>
-      {awakeComp}
+    <div className="d-flex justify-content-between" key={props.key}>
+      <div className="text-nowrap mb-1 me-3" style={{ width: "70px" }}>Plan #{props.i}</div>
       {wakeComp}
-      {asleepComp}
       {durationComp}
     </div>
   );
@@ -41,26 +44,68 @@ function usePeriodInputGroup(props) {
   return [state, component];
 }
 
-function DayInputForm(props) {
-  const periodInputs = [1, 2, 3, 4]
-    .map((sleepNum, i) => usePeriodInputGroup({ sleepNum: sleepNum, key: i }));
+function useSleepInputGroup(props) {
+  const [asleepTime, asleepComp] = useCompactInput({ name: `asleepTime[${props.i}]`, label: "Asleep time" });
 
-  const periodsStateVars = periodInputs.flatMap(([state, comp]) => [state.plannedDuration, state.asleepTime, state.awakeTime, state.plannedWakeTime]);
+  const [awakeTime, awakeComp] = (props.isLastSleep)
+    ? [null, null]
+    : useCompactInput({ name: `awakeTime[${props.i}]`, label: "Awake time" });
+
+  const state = {
+    awakeTime: awakeTime,
+    asleepTime: asleepTime,
+  }
+
+  const component = (
+    <div className="d-flex justify-content-between" key={props.key}>
+      <div className="text-nowrap mb-1 me-3" style={{ width: "70px" }}>
+        {
+          (props.i == 0)
+            ? "Night"
+            : "Sleep #" + props.i
+        }
+      </div>
+      {asleepComp}
+      {
+        (props.isLastSleep)
+          ? <div className="mb-2 me-2" style={{ flex: "1 1 50px" }}></div>
+          : awakeComp
+      }
+    </div>
+  );
+
+  return [state, component];
+}
+
+function DayInputForm(props) {
+  const sleepsAmount = 4;
+
+  const planInputs = Array.from({ length: sleepsAmount }, (v, k) => k + 1)
+    .map((sleepNum, i) => usePlanInputGroup({ i: sleepNum, key: i, init: props.model.data.initialPlan[i] }));
+
+  const sleepInputs = Array.from({ length: sleepsAmount + 1 }, (v, k) => k)
+    .map((sleepNum, i) => useSleepInputGroup({ i: sleepNum, key: i, isLastSleep: sleepNum == sleepsAmount }));
+
+  const planStateVars = planInputs.flatMap(([state, comp]) => [state.plannedDuration, state.plannedWakeTime]);
+  const sleepStateVars = sleepInputs.flatMap(([state, comp]) => [state.asleepTime, state.awakeTime]);
 
   // shitcode. useEffect shouldn't update the application state
   useEffect(() => {
-    console.log("EFFECT");
     props.model.submitDayPeriodsData(0, {
       title: "14 July",
       dayOfWeek: "Wednesday",
-      dayPeriods: periodInputs.map(([state, comp]) => state)
+      plan: planInputs.map(([state, comp]) => state),
+      sleeps: sleepInputs.map(([state, comp]) => state)
     });
-  }, periodsStateVars);
+  }, sleepStateVars.concat(planStateVars));
 
   return (
     <form onSubmit={() => ""}>
-      <h4 className="mb-3">Day Input</h4>
-      {periodInputs.map(([state, comp]) => comp)}
+      <h4 className="mb-3">Day Plan</h4>
+      {planInputs.map(([state, comp]) => comp)}
+
+      <h4 className="mb-3">Day Actual</h4>
+      {sleepInputs.map(([state, comp]) => comp)}
 
     </form>
   );
