@@ -59,7 +59,10 @@ function TimelineSleepItem(props) {
         key={1}
         isActive={false}
         leftDotText={plan.awakeTime}
-        rightDotText={actual.awakeTime} />
+        rightDotText={actual.awakeTime}
+        leftText={!lastItem && (<small className="text-muted">{plan.wakeTime}</small>)}
+        rightText={!lastItem && (<small className="text-muted">{actual.wakeTime}</small>)}
+      />
 
       <TimelineSection
         key={2}
@@ -68,12 +71,13 @@ function TimelineSleepItem(props) {
         rightText={!lastItem && actual.duration && (<small className="text-muted">{actual.duration} mins</small>)}
         leftDotText={plan.asleepTime}
         rightDotText={actual.asleepTime && <span>{actual.asleepTime} {
-          actual.difference != undefined && 
-          ((actual.difference > 0) 
-          ? <DangerText>(+{actual.difference} min)</DangerText>
-          : <SuccessText>({actual.difference} min)</SuccessText>)
+          actual.difference != undefined &&
+          ((actual.difference > 0)
+            ? <DangerText>(+{actual.difference} min)</DangerText>
+            : <SuccessText>({actual.difference} min)</SuccessText>)
         }</span>}
-        isEnd={lastItem} />
+      isEnd={lastItem} 
+      />
 
     </React.Fragment>
   );
@@ -94,7 +98,7 @@ function DayTimeline(props) {
 
       <div className="mt-3 mb-4">
         {
-          periods.map((dayPeriod, i) => <TimelineSleepItem dayPeriod={dayPeriod} awakeTime={day.awakeTime} key={i} number={i + 1} />)
+          periods.map((dayPeriod, i) => <TimelineSleepItem dayPeriod={dayPeriod} key={i} number={i + 1} />)
         }
       </div>
     </div>

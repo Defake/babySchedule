@@ -132,6 +132,7 @@ function defineModel() {
           },
           actual: {
             awakeTime: awakeDt.formatTime(),
+            wakeTime: actualWakeDt.formatTime(),
             asleepTime: asleepDt.formatTime(),
             difference: asleepDifference == 0 ? null : asleepDifference,
             duration: actualDurationDt.isValid
