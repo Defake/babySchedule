@@ -80,6 +80,8 @@ function useSleepInputGroup(props) {
 function DayInputForm(props) {
   const sleepsAmount = 4;
 
+  const [titleState, titleComp] = useCompactInput({ name: `title`, label: "Title" });
+
   const planInputs = Array.from({ length: sleepsAmount }, (v, k) => k + 1)
     .map((sleepNum, i) => usePlanInputGroup({ i: sleepNum, key: i, init: props.model.data.initialPlan[i] }));
 
@@ -92,19 +94,23 @@ function DayInputForm(props) {
   // shitcode. useEffect shouldn't update the application state
   useEffect(() => {
     props.model.submitDayPeriodsData(0, {
-      title: "14 July",
-      dayOfWeek: "Wednesday",
+      title: titleState,
       plan: planInputs.map(([state, comp]) => state),
       sleeps: sleepInputs.map(([state, comp]) => state)
     });
-  }, sleepStateVars.concat(planStateVars));
+  }, sleepStateVars.concat(planStateVars).concat([titleState]));
 
   return (
     <form onSubmit={() => ""}>
-      <h4 className="mb-3">Day Plan</h4>
+      <h4 className="mb-2">Day Schedule</h4>
+      {titleComp}
+
+      <h5 className="mt-3 mb-2">Day Plan</h5>
       {planInputs.map(([state, comp]) => comp)}
 
-      <h4 className="mb-3">Day Actual</h4>
+      <div className="d-flex flex-nowrap">
+        <h5 className="mb-2">Day Actual</h5>
+      </div>
       {sleepInputs.map(([state, comp]) => comp)}
 
     </form>

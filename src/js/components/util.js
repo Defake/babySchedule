@@ -14,3 +14,16 @@ function SuccessText(props) {
     <span className="text-success">{props.children}</span>
   );
 }
+
+function InfoText(props) {
+  return (
+    <span className="text-info">{props.children}</span>
+  );
+}
+
+function CrossedText(props) {
+  return (
+    <s className="text-muted">{props.children}</s>
+  );
+}
+

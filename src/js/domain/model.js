@@ -12,20 +12,20 @@ const initModelData = {
   },
   initialPlan: [
     {
-      wakeTime: "02:30",
+      wakeTime: "02:35",
       sleepTime: 45
     },
     {
-      wakeTime: "02:45",
-      sleepTime: 2*60
+      wakeTime: "02:55",
+      sleepTime: 2 * 60
     },
     {
-      wakeTime: "02:45",
+      wakeTime: "02:55",
       sleepTime: 45
     },
     {
-      wakeTime: "03:05",
-      sleepTime: 8*60
+      wakeTime: "03:10",
+      sleepTime: 8 * 60
     },
   ],
   days: [
@@ -94,8 +94,14 @@ function defineModel() {
         plannedAwakeDt: dayAwakeDt
       };
 
-      var wakeDt = new ParsedTime("00:00");
-      var sleepDt = new ParsedTime("00:00");
+      var wakeDts = {
+        plan: new ParsedTime("00:00"),
+        actual: new ParsedTime("00:00"),
+      };
+      var sleepDts = {
+        plan: new ParsedTime("00:00"),
+        actual: new ParsedTime("00:00"),
+      };
 
       var periods = [];
       const amount = dayMerged.periods.length;
@@ -110,17 +116,22 @@ function defineModel() {
         const plannedWakeDt = new ParsedTime(period.plannedWakeTime);
         const asleepDt = new ParsedTime(period.asleepTime);
         const plannedDuration = period.plannedDuration;
+        const plannedDurationDt = new ParsedTime("00:00").plus({ minutes: period.plannedDuration });
+
 
         const plannedAwakeDt = previous.plannedAwakeDt;
         const plannedAsleepDt = plannedWakeDt.isValid
-          ? plannedAwakeDt.plus({ time: plannedWakeDt.time })
+          ? (awakeDt.isValid
+            ? awakeDt.plus({ time: plannedWakeDt.time })
+            : plannedAwakeDt.plus({ time: plannedWakeDt.time }))
           : new InvalidDtObject('?');
 
         const actualWakeDt = asleepDt.plus({ time: -awakeDt.time });
         const nextAwakeDt = new ParsedTime(nextPeriod && nextPeriod.awakeTime);
         const actualDurationDt = nextAwakeDt.plus({ time: -asleepDt.time });
-        const asleepDifference = asleepDt.plus({ time: -plannedAsleepDt.time }).time / 60 / 1000;
 
+        const wakeDifference = actualWakeDt.plus({ time: -plannedWakeDt.time }).time / 60 / 1000;
+        const sleepDifference = actualDurationDt.plus({ minutes: -plannedDuration }).time / 60 / 1000;
 
         periods.push({
           lastSleep: i + 1 == amount,
@@ -134,7 +145,8 @@ function defineModel() {
             awakeTime: awakeDt.formatTime(),
             wakeTime: actualWakeDt.formatTime(),
             asleepTime: asleepDt.formatTime(),
-            difference: asleepDifference == 0 ? null : asleepDifference,
+            wakeDifference: wakeDifference == 0 ? null : wakeDifference,
+            sleepDifference: sleepDifference == 0 ? null : sleepDifference,
             duration: actualDurationDt.isValid
               ? actualDurationDt.time / 60 / 1000
               : null,
@@ -142,18 +154,39 @@ function defineModel() {
         });
 
         previous = {
-          plannedAwakeDt: plannedDuration ? plannedAsleepDt.plus({ minutes: plannedDuration }) : new InvalidDtObject(),
+          plannedAwakeDt: plannedDuration
+            ? (asleepDt.isValid
+              ? asleepDt.plus({ minutes: plannedDuration })
+              : plannedAsleepDt.plus({ minutes: plannedDuration }))
+            : new InvalidDtObject(),
         };
 
-        wakeDt = wakeDt.plus({ time: actualWakeDt.time });
-        sleepDt = sleepDt.plus({ time: actualDurationDt.time });
+        wakeDts = {
+          plan: wakeDts.plan.plus({
+            time: (actualWakeDt.isValid
+              ? actualWakeDt.time
+              : plannedWakeDt.time)
+          }),
+          actual: wakeDts.actual.plus({ time: actualWakeDt.time }),
+        };
+
+        sleepDts = {
+          plan: sleepDts.plan.plus({
+            time: (i == amount - 1)
+              ? 0
+              : (actualDurationDt.isValid
+                ? actualDurationDt.time
+                : plannedDurationDt.time)
+          }),
+          actual: sleepDts.actual.plus({ time: actualDurationDt.time }),
+        };
       }
 
       return {
         periods,
-        wakeTime: wakeDt.formatTime(),
-        sleepTime: sleepDt.formatTime(),
-        nightTime: dayAwakeDt.plus({days: 1, time: -new ParsedTime(dayMerged.previousNightAsleepTime).time}).formatTime() 
+        wakeTime: wakeDts,
+        sleepTime: sleepDts,
+        nightTime: dayAwakeDt.plus({ days: 1, time: -new ParsedTime(dayMerged.previousNightAsleepTime).time }).formatTime()
       };
     },
 
@@ -162,7 +195,7 @@ function defineModel() {
 
       for (var i = 0; i < sleeps.length - 1; i++) {
         const current = sleeps[i];
-        const next = sleeps[i+1];
+        const next = sleeps[i + 1];
 
         periods.push({
           awakeTime: current && current.awakeTime,
@@ -184,13 +217,14 @@ function defineModel() {
 
       var newDay = {
         title: dayData.title,
-        dayOfWeek: dayData.dayOfWeek,
         awakeTime: dayData.awakeTime,
         sleepTime: {
-          actual: convertedPeriods.sleepTime,
+          plan: convertedPeriods.sleepTime.plan.formatTime(),
+          actual: convertedPeriods.sleepTime.actual.formatTime(),
         },
         wakeTime: {
-          actual: convertedPeriods.wakeTime,
+          plan: convertedPeriods.wakeTime.plan.formatTime(),
+          actual: convertedPeriods.wakeTime.actual.formatTime(),
         },
         nightTime: {
           actual: convertedPeriods.nightTime,
