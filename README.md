@@ -9,4 +9,4 @@ Run project:
 
 ## Preview
 
-![Preview](https://github.com/Defake/babySchedule/blob/master/preview.png?raw=true)
+![Preview](https://github.com/Defake/babySchedule/blob/main/preview.png?raw=true)
