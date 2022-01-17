@@ -22,7 +22,7 @@ function TimelineLine(props) {
 }
 
 function TimelineSection(props) {
-  const sectionHeight = props.isEnd ? "5px" : props.isActive ? "70px" : "60px";
+  const sectionHeight = props.isEnd ? "5px" : props.isActive ? "60px" : "80px";
   return (
     <div className="d-flex align-items-start align-items-stretch">
       <div
@@ -112,9 +112,10 @@ function DayTimeline(props) {
     <div className="card">
       <div className="card-body">
         <h5 className="card-title">{day.title}</h5>
-        <h6 className="card-subtitle text-muted">Night time: {day.nightTime && day.nightTime.actual || "00:00"}</h6>
-        <h6 className="card-subtitle text-muted mt-1">Wake time: {day.wakeTime && day.wakeTime.actual || "00:00"} (plan {day.wakeTime.plan})</h6>
-        <h6 className="card-subtitle text-muted mt-1">Sleep time: {day.sleepTime && day.sleepTime.actual || "00:00"} (plan {day.sleepTime.plan})</h6>
+        <h6 className="card-subtitle text-muted">Wake time: {day.wakeTime && day.wakeTime.actual || "00:00"} (plan {day.wakeTime.plan})</h6>
+        <h6 className="card-subtitle text-muted mt-1">Ngt Sleep: {day.nightTime && day.nightTime.actual || "00:00"}</h6>
+        <h6 className="card-subtitle text-muted mt-1">Day Sleep: {day.sleepTime && day.sleepTime.actual || "00:00"} (plan {day.sleepTime.plan})</h6>
+        <h6 className="card-subtitle text-muted mt-1">Sleep Ovr: {day.daySleepTime && day.daySleepTime.actual || "00:00"} (plan {day.daySleepTime && day.daySleepTime.plan || "00:00"})</h6>
       </div>
 
       <div className="mt-3 mb-4">

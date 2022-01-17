@@ -19,13 +19,13 @@ function usePlanInputGroup(props) {
   const [wakeTime, wakeComp] = useCompactInput({
     name: `wakeTime[${props.i}]`,
     label: "Wake time",
-    initState: props.init && props.init.wakeTime
+    initState: props.init && props.init.plannedWakeTime
   });
 
   const [plannedDuration, durationComp] = useCompactInput({
     name: `sleepTime[${props.i}]`,
     label: "Sleep length (mins)",
-    initState: props.init && props.init.sleepTime
+    initState: props.init && props.init.plannedDuration
   });
 
   const state = {
@@ -45,11 +45,11 @@ function usePlanInputGroup(props) {
 }
 
 function useSleepInputGroup(props) {
-  const [asleepTime, asleepComp] = useCompactInput({ name: `asleepTime[${props.i}]`, label: "Asleep time" });
+  const [asleepTime, asleepComp] = useCompactInput({ name: `asleepTime[${props.i}]`, label: "Asleep time", initState: props.init && props.init.asleepTime });
 
   const [awakeTime, awakeComp] = (props.isLastSleep)
     ? [null, null]
-    : useCompactInput({ name: `awakeTime[${props.i}]`, label: "Awake time" });
+    : useCompactInput({ name: `awakeTime[${props.i}]`, label: "Awake time", initState: props.init && props.init.awakeTime });
 
   const state = {
     awakeTime: awakeTime,
@@ -78,15 +78,22 @@ function useSleepInputGroup(props) {
 }
 
 function DayInputForm(props) {
-  const sleepsAmount = 4;
+  const sleepsAmount = 3;
 
-  const [titleState, titleComp] = useCompactInput({ name: `title`, label: "Title" });
+  const dayDataInput = props && props.model && props.model.data && props.model.data.days && props.model.data.days[0] && props.model.data.days[0] && props.model.data.days[0].inputData;
+  const initTitle = dayDataInput && dayDataInput.title;
+  const initPlans = dayDataInput && dayDataInput.plan;
+  const initSleeps = dayDataInput && dayDataInput.sleeps;
+
+  const [titleState, titleComp] = useCompactInput({ name: `title`, label: "Title", initState: initTitle });
 
   const planInputs = Array.from({ length: sleepsAmount }, (v, k) => k + 1)
-    .map((sleepNum, i) => usePlanInputGroup({ i: sleepNum, key: i, init: props.model.data.initialPlan[i] }));
+    .map((sleepNum, i) => usePlanInputGroup({ i: sleepNum, key: i, init: initPlans && initPlans[i] }));
 
   const sleepInputs = Array.from({ length: sleepsAmount + 1 }, (v, k) => k)
-    .map((sleepNum, i) => useSleepInputGroup({ i: sleepNum, key: i, isLastSleep: sleepNum == sleepsAmount }));
+    .map((sleepNum, i) => {
+      return useSleepInputGroup({ i: sleepNum, key: i, isLastSleep: sleepNum == sleepsAmount, init: initSleeps && initSleeps[i] })
+    });
 
   const planStateVars = planInputs.flatMap(([state, comp]) => [state.plannedDuration, state.plannedWakeTime]);
   const sleepStateVars = sleepInputs.flatMap(([state, comp]) => [state.asleepTime, state.awakeTime]);

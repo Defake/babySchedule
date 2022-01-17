@@ -1,4 +1,4 @@
-const initModelData = {
+const initModel = {
   dayInput: {
     title: "14 July",
     dayOfWeek: "Wednesday",
@@ -12,29 +12,49 @@ const initModelData = {
   },
   initialPlan: [
     {
-      wakeTime: "02:35",
-      sleepTime: 45
+      wakeTime: "03:30",
+      sleepTime: 90
     },
     {
-      wakeTime: "02:55",
-      sleepTime: 2 * 60
+      wakeTime: "03:30",
+      sleepTime: 90
     },
+    // {
+    //   wakeTime: "02:55",
+    //   sleepTime: 45
+    // },
     {
-      wakeTime: "02:55",
-      sleepTime: 45
-    },
-    {
-      wakeTime: "03:10",
+      wakeTime: "04:15",
       sleepTime: 8 * 60
     },
   ],
   days: [
     {
+      inputData: {
+        plan: [
+          {
+            plannedDuration: 90,
+            plannedWakeTime: "03:30"
+          },
+          {
+            plannedDuration: 90,
+            plannedWakeTime: "03:30"
+          },
+          {
+            plannedDuration: 480,
+            plannedWakeTime: "04:15"
+          }
+        ]
+      },
       title: "14 July",
       dayOfWeek: "Wednesday",
       sleepTime: {
         plan: "04:10",
         actual: "04:10",
+      },
+      daySleepTime: {
+        plan: "13:55",
+        actual: "13:55",
       },
       wakeTime: {
         plan: "10:55",
@@ -82,6 +102,24 @@ const initModelData = {
   ],
 };
 
+var savedModel = null;
+
+function getSavedModel() {
+  if (savedModel === null) {
+    savedModel = {};
+    try {
+      savedModel = JSON.parse(window.localStorage.getItem('model'));
+    } catch (e) {
+      savedModel = undefined;
+    }
+  }
+
+  return Object.assign(initModel, savedModel);
+}
+
+const savedState = Object.assign({}, getSavedModel());
+const initModelData = (savedState == null) ? initModel : savedState;
+
 function defineModel() {
   const [modelState, setModelState] = useState(initModelData);
 
@@ -94,6 +132,8 @@ function defineModel() {
         plannedAwakeDt: dayAwakeDt
       };
 
+      var nightTimeDt = dayAwakeDt.plus({ days: 1, time: -new ParsedTime(dayMerged.previousNightAsleepTime).time });
+
       var wakeDts = {
         plan: new ParsedTime("00:00"),
         actual: new ParsedTime("00:00"),
@@ -101,6 +141,10 @@ function defineModel() {
       var sleepDts = {
         plan: new ParsedTime("00:00"),
         actual: new ParsedTime("00:00"),
+      };
+      var daySleepDts = {
+        plan: new ParsedTime("00:00").plus({ time: nightTimeDt.time}),
+        actual: new ParsedTime("00:00").plus({ time: nightTimeDt.time}),
       };
 
       var periods = [];
@@ -180,13 +224,25 @@ function defineModel() {
           }),
           actual: sleepDts.actual.plus({ time: actualDurationDt.time }),
         };
+
+        daySleepDts = {
+          plan: daySleepDts.plan.plus({
+            time: (i == amount - 1)
+              ? 0
+              : (actualDurationDt.isValid
+                ? actualDurationDt.time
+                : plannedDurationDt.time)
+          }),
+          actual: daySleepDts.actual.plus({ time: actualDurationDt.time }),
+        };
       }
 
       return {
         periods,
         wakeTime: wakeDts,
         sleepTime: sleepDts,
-        nightTime: dayAwakeDt.plus({ days: 1, time: -new ParsedTime(dayMerged.previousNightAsleepTime).time }).formatTime()
+        daySleepTime: daySleepDts,
+        nightTime: nightTimeDt.formatTime()
       };
     },
 
@@ -209,18 +265,23 @@ function defineModel() {
         previousNightAsleepTime: sleeps[0] && sleeps[0].asleepTime,
         periods
       };
-    },
+    },                     
 
     submitDayPeriodsData: function (i, dayData) {
       const dayMerged = this.mergeDayData(dayData.plan, dayData.sleeps);
       const convertedPeriods = this.convertSleepsData(dayMerged);
 
       var newDay = {
+        inputData: dayData,
         title: dayData.title,
         awakeTime: dayData.awakeTime,
         sleepTime: {
           plan: convertedPeriods.sleepTime.plan.formatTime(),
           actual: convertedPeriods.sleepTime.actual.formatTime(),
+        },
+        daySleepTime: {
+          plan: convertedPeriods.daySleepTime.plan.formatTime(),
+          actual: convertedPeriods.daySleepTime.actual.formatTime(),
         },
         wakeTime: {
           plan: convertedPeriods.wakeTime.plan.formatTime(),
@@ -235,6 +296,8 @@ function defineModel() {
       var newState = Object.assign({}, modelState);
       newState.days[0] = newDay;
       setModelState(newState);
+
+      window.localStorage.setItem('model', JSON.stringify(newState));
     }
   };
 
